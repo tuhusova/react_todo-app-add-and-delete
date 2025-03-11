@@ -58,7 +58,16 @@ export const TodoList: React.FC = () => {
   }
 
   const clearCompleted = () => {
-    setTodos(todos.filter(todo => !todo.completed));
+    const completedTodos = todos.filter(todo => todo.completed);
+
+    Promise.all(completedTodos.map(todo => postService.deleteTodo(todo.id)))
+      .then(() => {
+        setTodos(todos.filter(todo => !todo.completed));
+      })
+      .catch(() => {
+        setError(ErrorType.DeleteTodo);
+        setTimeout(() => setError(null), 3000);
+      });
   };
 
   function deleteTodo(todoId: number) {
