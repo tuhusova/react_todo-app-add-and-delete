@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, FormEvent, useMemo, useRef } from 'react';
 import { TodoItem } from '../../components/TodoItem/TodoItem';
 import * as postService from '../../api/todos';
@@ -28,7 +27,8 @@ export const TodoList: React.FC = () => {
   }, [error]);
 
   useEffect(() => {
-    postService.getTodos(USER_ID)
+    postService
+      .getTodos(USER_ID)
       .then(setTodos)
       .catch(() => {
         setError(ErrorType.LoadTodos);
@@ -63,9 +63,10 @@ export const TodoList: React.FC = () => {
 
     setLoadingTodoIds(prev => [...prev, -1]);
 
-    postService.createTodo({ title: trimmedTitle, completed: false, userId: USER_ID })
-      .then((newTodo) => {
-        setTodos((currentTodos) => [...currentTodos, newTodo]);
+    postService
+      .createTodo({ title: trimmedTitle, completed: false, userId: USER_ID })
+      .then(newTodo => {
+        setTodos(currentTodos => [...currentTodos, newTodo]);
         setTempTodo(null);
         setNewTodoTitle('');
       })
@@ -88,8 +89,9 @@ export const TodoList: React.FC = () => {
     setLoadingTodoIds(prev => [...prev, ...completedIds]);
 
     // Создаём массив Promises для удаления
-    const deletePromises = completedTodos.map((todo) =>
-      postService.deleteTodo(todo.id)
+    const deletePromises = completedTodos.map(todo =>
+      postService
+        .deleteTodo(todo.id)
         .then(() => {
           // Возвращаем ID для успешных операций
           return { id: todo.id, success: true };
@@ -97,23 +99,28 @@ export const TodoList: React.FC = () => {
         .catch(() => {
           // Возвращаем ID для неудачных операций
           return { id: todo.id, success: false };
-        })
+        }),
     );
 
     try {
       // Ожидаем завершения всех операций
       const results = await Promise.all(deletePromises);
 
-      const successfullyDeletedTodos = results.filter(result => result.success).map(result => result.id);
-      const failedTodos = results.filter(result => !result.success).map(result => result.id);
+      const successfullyDeletedTodos = results
+        .filter(result => result.success)
+        .map(result => result.id);
+      const failedTodos = results
+        .filter(result => !result.success)
+        .map(result => result.id);
 
-      setTodos((prevTodos) => prevTodos.filter(todo => !successfullyDeletedTodos.includes(todo.id)));
+      setTodos(prevTodos =>
+        prevTodos.filter(todo => !successfullyDeletedTodos.includes(todo.id)),
+      );
 
       if (failedTodos.length > 0) {
         setError(ErrorType.DeleteTodo);
         setTimeout(() => setError(null), 3000);
       }
-
     } catch (error) {
       setError(ErrorType.DeleteTodo);
       setTimeout(() => setError(null), 3000);
@@ -125,13 +132,15 @@ export const TodoList: React.FC = () => {
     }
   };
 
-
   const deleteTodo = (todoId: number) => {
     setLoadingTodoIds(prev => [...prev, todoId]);
 
-    postService.deleteTodo(todoId)
+    postService
+      .deleteTodo(todoId)
       .then(() => {
-        setTodos(currentTodos => currentTodos.filter(todo => todo.id !== todoId));
+        setTodos(currentTodos =>
+          currentTodos.filter(todo => todo.id !== todoId),
+        );
         if (inputRef.current) {
           inputRef.current.focus();
         }
@@ -143,15 +152,20 @@ export const TodoList: React.FC = () => {
           inputRef.current.focus();
         }
       })
-      .finally(() => setLoadingTodoIds(prev => prev.filter(id => id !== todoId)));
+      .finally(() =>
+        setLoadingTodoIds(prev => prev.filter(id => id !== todoId)),
+      );
   };
 
   const handleToggle = (id: number) => {
     setLoadingTodoIds(prev => [...prev, id]);
 
     setTimeout(() => {
-
-      setTodos(todos.map(todo => todo.id === id ? { ...todo, completed: !todo.completed } : todo));
+      setTodos(
+        todos.map(todo =>
+          todo.id === id ? { ...todo, completed: !todo.completed } : todo,
+        ),
+      );
 
       setLoadingTodoIds(prev => prev.filter(todoId => todoId !== id));
     }, 300);
@@ -189,15 +203,20 @@ export const TodoList: React.FC = () => {
   const activeTodos = todos.filter(todo => !todo.completed);
   const completedTodos = todos.filter(todo => todo.completed);
 
-  const handleFilterClick = (filter: FilterType) => (event: React.MouseEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
-    setFilterBy(filter);
-  };
+  const handleFilterClick =
+    (filter: FilterType) => (event: React.MouseEvent<HTMLAnchorElement>) => {
+      event.preventDefault();
+      setFilterBy(filter);
+    };
 
   const filters = [
     { type: FilterType.All, label: 'All', cy: 'FilterLinkAll' },
     { type: FilterType.Active, label: 'Active', cy: 'FilterLinkActive' },
-    { type: FilterType.Completed, label: 'Completed', cy: 'FilterLinkCompleted' },
+    {
+      type: FilterType.Completed,
+      label: 'Completed',
+      cy: 'FilterLinkCompleted',
+    },
   ];
 
   return (
@@ -223,7 +242,7 @@ export const TodoList: React.FC = () => {
               placeholder="What needs to be done?"
               autoFocus
               value={newTodoTitle}
-              onChange={(e) => setNewTodoTitle(e.target.value)}
+              onChange={e => setNewTodoTitle(e.target.value)}
               disabled={isAdding}
               ref={inputRef}
             />
@@ -241,14 +260,16 @@ export const TodoList: React.FC = () => {
             />
           ))}
 
-          {tempTodo && <TodoItem
-            key={tempTodo.id}
-            todo={tempTodo}
-            {...tempTodo}
-            onDelete={deleteTodo}
-            onToggle={handleToggle}
-            isLoading={loadingTodoIds.includes(tempTodo.id)}
-            />}
+          {tempTodo && (
+            <TodoItem
+              key={tempTodo.id}
+              todo={tempTodo}
+              {...tempTodo}
+              onDelete={deleteTodo}
+              onToggle={handleToggle}
+              isLoading={loadingTodoIds.includes(tempTodo.id)}
+            />
+          )}
         </section>
 
         {todos.length > 0 && (
@@ -262,7 +283,9 @@ export const TodoList: React.FC = () => {
                 <a
                   key={type}
                   href={`"#/${label}"`}
-                  className={cs('filter__link', { selected: filterBy === type })}
+                  className={cs('filter__link', {
+                    selected: filterBy === type,
+                  })}
                   data-cy={cy}
                   onClick={handleFilterClick(type)}
                 >
@@ -284,22 +307,21 @@ export const TodoList: React.FC = () => {
         )}
       </div>
 
-        <div
-          data-cy="ErrorNotification"
-          className={cs(
-            'notification is-danger is-light has-text-weight-normal',
-            {
-              hidden: !error,
-            },
-          )}
-        >
-          <button data-cy="HideErrorButton" type="button" className="delete" />
-          <div>
-            {error}
-            <br />
-          </div>
+      <div
+        data-cy="ErrorNotification"
+        className={cs(
+          'notification is-danger is-light has-text-weight-normal',
+          {
+            hidden: !error,
+          },
+        )}
+      >
+        <button data-cy="HideErrorButton" type="button" className="delete" />
+        <div>
+          {error}
+          <br />
         </div>
-
+      </div>
     </div>
   );
 };

@@ -1,7 +1,6 @@
 import cn from 'classnames';
 import { Todo } from '../../types/Todo';
 
-
 interface Props {
   todo: Todo;
   onDelete: (id: number) => void;
@@ -9,7 +8,12 @@ interface Props {
   isLoading: boolean;
 }
 
-export const TodoItem: React.FC<Props> = ({ todo, onToggle, onDelete, isLoading }) => {
+export const TodoItem: React.FC<Props> = ({
+  todo,
+  onToggle,
+  onDelete,
+  isLoading,
+}) => {
   const { title, completed, id } = todo;
 
   return (
@@ -24,7 +28,6 @@ export const TodoItem: React.FC<Props> = ({ todo, onToggle, onDelete, isLoading 
           checked={completed}
           onChange={() => onToggle(id)}
           disabled={isLoading}
-
         />
       </label>
 
@@ -34,15 +37,19 @@ export const TodoItem: React.FC<Props> = ({ todo, onToggle, onDelete, isLoading 
 
       {/* Remove button appears only on hover */}
       <button
-         type="button"
-         className="todo__remove"
-         data-cy="TodoDelete"
-         onClick={() => onDelete(id)}>
+        type="button"
+        className="todo__remove"
+        data-cy="TodoDelete"
+        onClick={() => onDelete(id)}
+      >
         ×
       </button>
 
       {/* overlay will cover the todo while it is being deleted or updated */}
-      <div data-cy="TodoLoader" className={cn("modal overlay", {'is-active': isLoading})}>
+      <div
+        data-cy="TodoLoader"
+        className={cn('modal overlay', { 'is-active': isLoading })}
+      >
         <div className="modal-background has-background-white-ter" />
         <div className="loader" />
       </div>
