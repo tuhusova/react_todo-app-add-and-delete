@@ -121,7 +121,7 @@ export const TodoList: React.FC = () => {
         setError(ErrorType.DeleteTodo);
         setTimeout(() => setError(null), 3000);
       }
-    } catch (error) {
+    } catch (deleteError) {
       setError(ErrorType.DeleteTodo);
       setTimeout(() => setError(null), 3000);
     } finally {
