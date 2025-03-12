@@ -6,9 +6,10 @@ interface Props {
   todo: Todo;
   onDelete: (id: number) => void;
   onToggle: (id: number) => void;
+  isLoading?: boolean;
 }
 
-export const TodoItem: React.FC<Props> = ({ todo, onToggle, onDelete }) => {
+export const TodoItem: React.FC<Props> = ({ todo, onToggle, onDelete, isLoading }) => {
   const { title, completed, id } = todo;
 
   return (
@@ -39,10 +40,12 @@ export const TodoItem: React.FC<Props> = ({ todo, onToggle, onDelete }) => {
       </button>
 
       {/* overlay will cover the todo while it is being deleted or updated */}
-      <div data-cy="TodoLoader" className="modal overlay">
+      {isLoading && (
+        <div data-cy="TodoLoader" className="modal overlay">
         <div className="modal-background has-background-white-ter" />
         <div className="loader" />
       </div>
+      )}
     </div>
   );
 };

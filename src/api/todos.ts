@@ -9,11 +9,8 @@ export function getTodos(userId: number) {
 export function createTodo({ title, completed, userId = USER_ID }: Omit<Todo, 'id'>) {
   return client.post<Todo>(`/todos`, { title, completed, userId });
 };
-// export const patchTodos = (todoId: number, updates: Partial<Todo>) => {
-//   return client.patch<Todo[]>(`/todos/${todoId}`, updates);
-// };
+
 export function deleteTodo(todoId: number) {
   return client.delete(`/todos/${todoId}`);
 };
 
-// Add more methods here
