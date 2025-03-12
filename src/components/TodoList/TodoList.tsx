@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, FormEvent, useMemo } from 'react';
+import React, { useEffect, useState, FormEvent, useMemo, useRef } from 'react';
 import { TodoItem } from '../../components/TodoItem/TodoItem';
 import * as postService from '../../api/todos';
 import { Todo } from '../../types/Todo';
@@ -8,7 +8,6 @@ import { FilterType } from '../../types/FilterType';
 import cs from 'classnames';
 import { USER_ID } from '../../api/todos';
 
-
 export const TodoList: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [error, setError] = useState<ErrorType | null>(null);
@@ -16,7 +15,17 @@ export const TodoList: React.FC = () => {
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [tempTodo, setTempTodo] = useState<Todo | null>(null);
-  const [loadingTodoId, setLoadingTodoId] = useState<number | null>(null);
+  const [loadingTodoIds, setLoadingTodoIds] = useState<number[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 3000);
+      return () => clearTimeout(timer);
+    }
+
+    return undefined;
+  }, [error]);
 
   useEffect(() => {
     postService.getTodos(USER_ID)
@@ -27,6 +36,12 @@ export const TodoList: React.FC = () => {
       });
   }, []);
 
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [error, newTodoTitle]);
+
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     const trimmedTitle = newTodoTitle.trim();
@@ -36,13 +51,17 @@ export const TodoList: React.FC = () => {
       return;
     }
 
-    setIsAdding(true);
-    setTempTodo({
-      id: 0,
+    const newTempTodo = {
+      id: -1,
       title: trimmedTitle,
       completed: false,
       userId: USER_ID,
-    });
+    };
+
+    setTempTodo(newTempTodo);
+    setIsAdding(true);
+
+    setLoadingTodoIds(prev => [...prev, -1]);
 
     postService.createTodo({ title: trimmedTitle, completed: false, userId: USER_ID })
       .then((newTodo) => {
@@ -52,41 +71,108 @@ export const TodoList: React.FC = () => {
       })
       .catch(() => {
         setError(ErrorType.AddTodo);
+        setTempTodo(null);
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
       })
       .finally(() => {
         setIsAdding(false);
       });
   };
 
-  const clearCompleted = () => {
+  const clearCompleted = async () => {
     const completedTodos = todos.filter(todo => todo.completed);
+    const completedIds = completedTodos.map(todo => todo.id);
 
-    Promise.all(completedTodos.map(todo => postService.deleteTodo(todo.id)))
-      .then(() => {
-        setTodos(todos.filter(todo => !todo.completed));
-      })
-      .catch(() => {
+    setLoadingTodoIds(prev => [...prev, ...completedIds]);
+
+    // Создаём массив Promises для удаления
+    const deletePromises = completedTodos.map((todo) =>
+      postService.deleteTodo(todo.id)
+        .then(() => {
+          // Возвращаем ID для успешных операций
+          return { id: todo.id, success: true };
+        })
+        .catch(() => {
+          // Возвращаем ID для неудачных операций
+          return { id: todo.id, success: false };
+        })
+    );
+
+    try {
+      // Ожидаем завершения всех операций
+      const results = await Promise.all(deletePromises);
+
+      const successfullyDeletedTodos = results.filter(result => result.success).map(result => result.id);
+      const failedTodos = results.filter(result => !result.success).map(result => result.id);
+
+      setTodos((prevTodos) => prevTodos.filter(todo => !successfullyDeletedTodos.includes(todo.id)));
+
+      if (failedTodos.length > 0) {
         setError(ErrorType.DeleteTodo);
         setTimeout(() => setError(null), 3000);
-      });
+      }
+
+    } catch (error) {
+      setError(ErrorType.DeleteTodo);
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setLoadingTodoIds(prev => prev.filter(id => !completedIds.includes(id)));
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }
   };
 
+
   const deleteTodo = (todoId: number) => {
-    setLoadingTodoId(todoId);
+    setLoadingTodoIds(prev => [...prev, todoId]);
 
     postService.deleteTodo(todoId)
       .then(() => {
         setTodos(currentTodos => currentTodos.filter(todo => todo.id !== todoId));
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
       })
       .catch(() => {
         setError(ErrorType.DeleteTodo);
         setTimeout(() => setError(null), 3000);
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
       })
-      .finally(() => setLoadingTodoId(null));
+      .finally(() => setLoadingTodoIds(prev => prev.filter(id => id !== todoId)));
   };
 
   const handleToggle = (id: number) => {
-    setTodos(todos.map(todo => todo.id === id ? { ...todo, completed: !todo.completed } : todo));
+    setLoadingTodoIds(prev => [...prev, id]);
+
+    setTimeout(() => {
+
+      setTodos(todos.map(todo => todo.id === id ? { ...todo, completed: !todo.completed } : todo));
+
+      setLoadingTodoIds(prev => prev.filter(todoId => todoId !== id));
+    }, 300);
+  };
+
+  const handleToggleAll = () => {
+    const allCompleted = todos.every(todo => todo.completed);
+
+    const updatedTodos = todos.map(todo => ({
+      ...todo,
+      completed: !allCompleted,
+    }));
+
+    const allTodoIds = todos.map(todo => todo.id);
+    setLoadingTodoIds(prev => [...prev, ...allTodoIds]);
+
+    setTimeout(() => {
+      setTodos(updatedTodos);
+
+      setLoadingTodoIds(prev => prev.filter(id => !allTodoIds.includes(id)));
+    }, 300);
   };
 
   const filteredTodos = useMemo(() => {
@@ -125,6 +211,7 @@ export const TodoList: React.FC = () => {
                 active: todos.every(todo => todo.completed),
               })}
               data-cy="ToggleAllButton"
+              onClick={handleToggleAll}
             />
           )}
 
@@ -138,6 +225,7 @@ export const TodoList: React.FC = () => {
               value={newTodoTitle}
               onChange={(e) => setNewTodoTitle(e.target.value)}
               disabled={isAdding}
+              ref={inputRef}
             />
           </form>
         </header>
@@ -149,10 +237,18 @@ export const TodoList: React.FC = () => {
               todo={todo}
               onDelete={deleteTodo}
               onToggle={handleToggle}
-              isLoading={todo.id === loadingTodoId} />
+              isLoading={loadingTodoIds.includes(todo.id)}
+            />
           ))}
 
-          {tempTodo && <TodoItem key={tempTodo.id} todo={tempTodo} {...tempTodo} onDelete={deleteTodo} onToggle={handleToggle} isLoading={true}/>}
+          {tempTodo && <TodoItem
+            key={tempTodo.id}
+            todo={tempTodo}
+            {...tempTodo}
+            onDelete={deleteTodo}
+            onToggle={handleToggle}
+            isLoading={loadingTodoIds.includes(tempTodo.id)}
+            />}
         </section>
 
         {todos.length > 0 && (
@@ -188,7 +284,6 @@ export const TodoList: React.FC = () => {
         )}
       </div>
 
-      {error && (
         <div
           data-cy="ErrorNotification"
           className={cs(
@@ -204,7 +299,7 @@ export const TodoList: React.FC = () => {
             <br />
           </div>
         </div>
-      )}
+
     </div>
   );
 };
