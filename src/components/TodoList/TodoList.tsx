@@ -88,27 +88,24 @@ export const TodoList: React.FC = () => {
 
     setLoadingTodoIds(prev => [...prev, ...completedIds]);
 
-    // Создаём массив Promises для удаления
     const deletePromises = completedTodos.map(todo =>
       postService
         .deleteTodo(todo.id)
         .then(() => {
-          // Возвращаем ID для успешных операций
           return { id: todo.id, success: true };
         })
         .catch(() => {
-          // Возвращаем ID для неудачных операций
           return { id: todo.id, success: false };
         }),
     );
 
     try {
-      // Ожидаем завершения всех операций
       const results = await Promise.all(deletePromises);
 
       const successfullyDeletedTodos = results
         .filter(result => result.success)
         .map(result => result.id);
+
       const failedTodos = results
         .filter(result => !result.success)
         .map(result => result.id);
@@ -121,9 +118,7 @@ export const TodoList: React.FC = () => {
         setError(ErrorType.DeleteTodo);
         setTimeout(() => setError(null), 3000);
       }
-    } catch (deleteError) {
-      setError(ErrorType.DeleteTodo);
-      setTimeout(() => setError(null), 3000);
+
     } finally {
       setLoadingTodoIds(prev => prev.filter(id => !completedIds.includes(id)));
       if (inputRef.current) {
@@ -212,11 +207,7 @@ export const TodoList: React.FC = () => {
   const filters = [
     { type: FilterType.All, label: 'All', cy: 'FilterLinkAll' },
     { type: FilterType.Active, label: 'Active', cy: 'FilterLinkActive' },
-    {
-      type: FilterType.Completed,
-      label: 'Completed',
-      cy: 'FilterLinkCompleted',
-    },
+    { type: FilterType.Completed, label: 'Completed', cy: 'FilterLinkCompleted' },
   ];
 
   return (
